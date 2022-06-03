@@ -710,7 +710,7 @@ func getImage(w http.ResponseWriter, r *http.Request) {
 		log.Print(err)
 		return
 	}
-	writeImage(pid, post.Mime, post.Imgdata)
+	//writeImage(pid, post.Mime, post.Imgdata)
 
 	ext := pat.Param(r, "ext")
 
