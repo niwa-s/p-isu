@@ -30,6 +30,7 @@ import (
 var (
 	db    *sqlx.DB
 	store *gsm.MemcacheStore
+	mc    *memcache.Client
 )
 
 const (
@@ -55,7 +56,7 @@ type Post struct {
 	Mime         string    `db:"mime"`
 	CreatedAt    time.Time `db:"created_at"`
 	CommentCount int
-	AccountName string `db:"account_name"`
+	AccountName  string `db:"account_name"`
 	Comments     []Comment
 	User         User
 	CSRFToken    string
@@ -75,8 +76,8 @@ func init() {
 	if memdAddr == "" {
 		memdAddr = "localhost:11211"
 	}
-	memcacheClient := memcache.New(memdAddr)
-	store = gsm.NewMemcacheStore(memcacheClient, "iscogram_", []byte("sendagaya"))
+	mc := memcache.New(memdAddr)
+	store = gsm.NewMemcacheStore(mc, "iscogram_", []byte("sendagaya"))
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 }
 
@@ -179,10 +180,20 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	var posts []Post
 
 	for _, p := range results {
-		err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
+		CommentsCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
+		if err != nil {
+			err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
+			if err != nil {
+				return nil, err
+			}
+			mc.Set(&memcache.Item{Key: "comments_count_"+strconv.Itoa(p.ID), Value: []byte(strconv.Itoa(p.CommentCount)), Expiration: 60})
+		}
+
+		count, err := strconv.Atoi(string(CommentsCount.Value))
 		if err != nil {
 			return nil, err
 		}
+		p.CommentCount = count
 
 		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
 		if !allComments {
@@ -432,7 +443,6 @@ func getAccountName(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results := []Post{}
-
 
 	//err = db.Select(&results, "SELECT `id`, `user_id`, `body`, `mime`, `created_at` FROM `posts` WHERE `user_id` = ? ORDER BY `created_at` DESC", user.ID)
 	err = db.Select(&results, "SELECT p.id, p.user_id, p.body, p.created_at, p.mime, u.account_name FROM `posts` AS p JOIN `users` AS u ON (p.user_id=u.id) WHERE u.del_flg=0 ORDER BY p.created_at DESC LIMIT 20")
