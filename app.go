@@ -181,16 +181,16 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 
 	for _, p := range results {
 		CommentCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
-		log.Println("comments!!!!")
+		log.Println("commentcount:", CommentCount)
 		if err != nil {
 			err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
 			if err != nil {
-				fmt.Sprintln("asafsdf")
+				log.Println("188行目")
 				return nil, err
 			}
 			err = mc.Set(&memcache.Item{Key: "comments_count_" + strconv.Itoa(p.ID), Value: []byte(strconv.Itoa(p.CommentCount))})
 			if err != nil {
-				log.Println(err)
+				log.Println("193行目")
 				return nil, err
 			}
 		} else {
