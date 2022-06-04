@@ -827,13 +827,14 @@ func postComment(w http.ResponseWriter, r *http.Request) {
 		log.Print("post_idは整数のみです")
 		return
 	}
+	appendComent(Comment{PostID: postID, UserID: me.ID, Comment: r.FormValue("comment")})
 
-	query := "INSERT INTO `comments` (`post_id`, `user_id`, `comment`) VALUES (?,?,?)"
+	/*query := "INSERT INTO `comments` (`post_id`, `user_id`, `comment`) VALUES (?,?,?)"
 	_, err = db.Exec(query, postID, me.ID, r.FormValue("comment"))
 	if err != nil {
 		log.Print(err)
 		return
-	}
+	}*/
 
 	http.Redirect(w, r, fmt.Sprintf("/posts/%d", postID), http.StatusFound)
 }
