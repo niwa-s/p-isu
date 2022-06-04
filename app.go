@@ -30,8 +30,43 @@ import (
 var (
 	db    *sqlx.DB
 	store *gsm.MemcacheStore
-	mc    *memcache.Client
+	commentStore map[int][]Comment = make(map[int][]Comment)
 )
+
+func getComments(postID int) []Comment {
+	if cs, ok := commentStore[postID]; ok {
+		return cs
+	}
+
+	var cs []Comment
+	query := ("SELECT comments.id, comments.comment, comments.created_at, users.id, users.account_name " +
+		" FROM `comments` INNER JOIN users ON comments.user_id = users.id " +
+		" WHERE `post_id` = ? ORDER BY comments.`created_at`")
+	
+	rows, err := db.Query(query, postID)
+	if err != nil {
+		log.Println(err)
+		return cs
+	}
+	for rows.Next() {
+		var c Comment
+		err := rows.Scan(&c.ID, &c.Comment, &c.CreatedAt, &c.User.ID, &c.User.AccountName)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		cs = append(cs, c)
+	}
+	rows.Close()
+
+	commentStore[postID] = cs
+	return cs
+}
+
+func appendComent(c Comment) {
+	cs := getComments(c.PostID)
+	commentStore[c.PostID] = append(cs, c)
+}
 
 const (
 	postsPerPage  = 20
@@ -176,7 +211,7 @@ func getFlash(w http.ResponseWriter, r *http.Request, key string) string {
 	}
 }
 
-func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, error) {
+/*func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, error) {
 	var posts []Post
 
 	for _, p := range results {
@@ -200,7 +235,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 				return nil, err
 			}
 			p.CommentCount = count
-		}*/
+		}
 		p.CommentCount = 10
 		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
 		if !allComments {
@@ -217,7 +252,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 			if err != nil {
 				return nil, err
 			}
-		}*/
+		}
 
 		// reverse
 		for i, j := 0, len(comments)-1; i < j; i, j = i+1, j-1 {
@@ -237,6 +272,30 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 		posts = append(posts, p)
 	}
 
+	return posts, nil
+}*/
+
+func makePosts(results []Post, CSRFToken string, allComments bool) ([]Post, error) {
+	var posts []Post
+
+	for _, p := range results {
+		comments := getComments(p.ID)
+		if !allComments && len(comments) > 3 {
+			comments = comments[len(comments)-3:]
+		}
+		p.Comments = comments
+		p.CSRFToken = CSRFToken
+
+		p.User.AccountName = p.AccountName
+		if p.User.DelFlg == 1 {
+			continue
+		}
+
+		posts = append(posts, p)
+		if len(posts) >= postsPerPage {
+			break
+		}
+	}
 	return posts, nil
 }
 
