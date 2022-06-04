@@ -180,6 +180,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	var posts []Post
 
 	for _, p := range results {
+		log.Println("-------------------------------------")
 		CommentCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
 		log.Println("commentcount:", CommentCount)
 		if err != nil {
