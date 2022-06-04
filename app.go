@@ -186,7 +186,10 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 			if err != nil {
 				return nil, err
 			}
-			mc.Set(&memcache.Item{Key: "comments_count_"+strconv.Itoa(p.ID), Value: CommentCount.Value, Expiration: 60})
+			err = mc.Set(&memcache.Item{Key: "comments_count_" + strconv.Itoa(p.ID)})
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		count, err := strconv.Atoi(string(CommentCount.Value))
