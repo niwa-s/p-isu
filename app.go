@@ -181,6 +181,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 
 	for _, p := range results {
 		CommentCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
+		log.Println("comments!!!!")
 		if err != nil {
 			err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
 			if err != nil {
