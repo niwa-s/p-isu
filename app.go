@@ -180,16 +180,16 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	var posts []Post
 
 	for _, p := range results {
-		CommentsCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
+		CommentCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
 		if err != nil {
-			err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
+			err := db.Get(&CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
 			if err != nil {
 				return nil, err
 			}
-			mc.Set(&memcache.Item{Key: "comments_count_"+strconv.Itoa(p.ID), Value: []byte(strconv.Itoa(p.CommentCount)), Expiration: 60})
+			mc.Set(&memcache.Item{Key: "comments_count_"+strconv.Itoa(p.ID), Value: CommentCount.Value, Expiration: 60})
 		}
 
-		count, err := strconv.Atoi(string(CommentsCount.Value))
+		count, err := strconv.Atoi(string(CommentCount.Value))
 		if err != nil {
 			return nil, err
 		}
