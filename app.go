@@ -181,7 +181,7 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 
 	for _, p := range results {
 		log.Println("-------------------------------------")
-		CommentCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
+		/*CommentCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
 		//log.Println("commentcount:", CommentCount)
 		if err != nil {
 			err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
@@ -200,13 +200,14 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 				return nil, err
 			}
 			p.CommentCount = count
-		}
+		}*/
+		p.CommentCount = 10
 		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
 		if !allComments {
 			query += " LIMIT 3"
 		}
 		var comments []Comment
-		err = db.Select(&comments, query, p.ID)
+		err := db.Select(&comments, query, p.ID)
 		if err != nil {
 			return nil, err
 		}
