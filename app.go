@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	crand "crypto/rand"
+	"crypto/sha512"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"net/url"
 	"os"
-	"crypto/sha512"
 	"path"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -926,6 +928,11 @@ func (reg *RegexpPattern) Match(r *http.Request) *http.Request {
 }
 
 func main() {
+	runtime.SetBlockProfileRate(1)
+    runtime.SetMutexProfileFraction(1)
+    go func() {
+        log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+    }()
 	host := os.Getenv("ISUCONP_DB_HOST")
 	if host == "" {
 		host = "localhost"
