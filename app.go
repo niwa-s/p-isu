@@ -182,24 +182,23 @@ func makePosts(results []Post, csrfToken string, allComments bool) ([]Post, erro
 	for _, p := range results {
 		CommentCount, err := mc.Get("comments_count_" + strconv.Itoa(p.ID))
 		if err != nil {
-			err := db.Get(&CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
+			err := db.Get(&p.CommentCount, "SELECT COUNT(*) AS `count` FROM `comments` WHERE `post_id` = ?", p.ID)
 			if err != nil {
 				log.Println(err)
 				return nil, err
 			}
-			err = mc.Set(&memcache.Item{Key: "comments_count_" + strconv.Itoa(p.ID)})
+			err = mc.Set(&memcache.Item{Key: "comments_count_" + strconv.Itoa(p.ID), Value: []byte(strconv.Itoa(p.CommentCount))})
 			if err != nil {
 				log.Println(err)
 				return nil, err
 			}
+		} else {
+			count, err := strconv.Atoi(string(CommentCount.Value))
+			if err != nil {
+				return nil, err
+			}
+			p.CommentCount = count
 		}
-
-		count, err := strconv.Atoi(string(CommentCount.Value))
-		if err != nil {
-			return nil, err
-		}
-		p.CommentCount = count
-
 		query := "SELECT * FROM `comments` WHERE `post_id` = ? ORDER BY `created_at` DESC"
 		if !allComments {
 			query += " LIMIT 3"
